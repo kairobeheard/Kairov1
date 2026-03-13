@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Kairo — A Voice Sanctuary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+  <div id="cur"></div>
+  <div id="curR"></div>
+  <canvas id="pc"></canvas>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nLogo"><em>K</em>airo</div>
+    <ul class="nLinks">
+      <li><a href="#story">Story</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#record">Share Voice</a></li>
+      <li><a href="#waitlist">Waitlist</a></li>
+    </ul>
+    <button class="nBtn" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">Join
+      Waitlist</button>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hGlow"></div>
+    <div class="hTag"><span class="tDot"></span>Voice Sanctuary · Opening Soon</div>
+    <h1 class="hTitle"><span class="kG">K</span>airo</h1>
+    <p class="hTagline">"Some things are easier to say to strangers."</p>
+    <p class="hDesc">A voice-first sanctuary where people talk, listen, and leave lighter.</p>
+    <div class="hBtns">
+      <a href="#waitlist" class="bP">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path
+            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.6a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 10.5" />
+        </svg>
+        Join Waitlist
+      </a>
+      <a href="#record" class="bO">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" y1="19" x2="12" y2="23" />
+          <line x1="8" y1="23" x2="16" y2="23" />
+        </svg>
+        Share Your Voice
+      </a>
+    </div>
+    <div class="hCtr">
+      <div class="cAvs">
+        <div class="cAv"></div>
+        <div class="cAv"></div>
+        <div class="cAv"></div>
+      </div>
+      <p class="cTxt"><strong id="vCount">58</strong> voices waiting to enter the sanctuary</p>
+    </div>
+    <div class="hWave" id="hWave"></div>
+  </section>
+
+  <div class="div"></div>
+
+  <!-- STORY -->
+  <section class="story" id="story">
+    <p class="sLine" data-i="0">Some words stay inside.</p>
+    <p class="sLine" data-i="1">Some things are hard to say.</p>
+    <p class="sLine" data-i="2" style="font-style:italic">But sometimes…</p>
+    <p class="sLine last" data-i="3">all we need is <em>someone listening.</em></p>
+  </section>
+
+  <div class="div"></div>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <p class="sLbl">Why Kairo</p>
+    <h2 class="sTitle">Radical honesty lives in radical anonymity.</h2>
+    <div class="fGrid">
+      <div class="fCard" data-d="0">
+        <div class="fIco">🎭</div>
+        <h3 class="fTitle">No Profiles</h3>
+        <p class="fDesc">Speak freely without identity. No username, no avatar, no history. Enter nameless. Leave
+          lighter.</p>
+      </div>
+      <div class="fCard" data-d="130">
+        <div class="fIco">🎙️</div>
+        <h3 class="fTitle">Just Voice</h3>
+        <p class="fDesc">Real conversations stripped of social pressure. No likes to chase, no followers to perform for.
+          Only the honest sound of a human.</p>
+      </div>
+      <div class="fCard" data-d="260">
+        <div class="fIco">🌊</div>
+        <h3 class="fTitle">Be Heard</h3>
+        <p class="fDesc">Sometimes people don't need advice. They need ears. Your words ripple into a space where
+          strangers truly listen.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="div"></div>
+
+  <!-- RECORD -->
+  <section class="recSec" id="record">
+    <p class="sLbl">Leave Your Mark</p>
+    <h2 class="sTitle" style="text-align:center;margin-left:auto;margin-right:auto">Share Your Voice</h2>
+    <p class="recSub">Record up to 30 seconds. No name required.<br>Your voice joins the sanctuary, anonymously.</p>
+    <div class="recWrap">
+      <div class="lViz" id="lViz">
+        <div class="lB" style="height:70%;animation-delay:0s"></div>
+        <div class="lB" style="height:40%;animation-delay:.08s"></div>
+        <div class="lB" style="height:90%;animation-delay:.16s"></div>
+        <div class="lB" style="height:55%;animation-delay:.24s"></div>
+        <div class="lB" style="height:80%;animation-delay:.32s"></div>
+        <div class="lB" style="height:35%;animation-delay:.4s"></div>
+        <div class="lB" style="height:95%;animation-delay:.48s"></div>
+        <div class="lB" style="height:60%;animation-delay:.56s"></div>
+        <div class="lB" style="height:75%;animation-delay:.64s"></div>
+        <div class="lB" style="height:45%;animation-delay:.72s"></div>
+        <div class="lB" style="height:85%;animation-delay:.8s"></div>
+        <div class="lB" style="height:50%;animation-delay:.88s"></div>
+      </div>
+      <button id="mBtn" title="Start recording">🎙️</button>
+      <div class="rStat" id="rStat">
+        <span>Press to speak &nbsp;·&nbsp; </span><span class="t" id="rTimer">0:00</span><span> / 0:30</span>
+      </div>
+      <div class="rActs">
+        <button class="bP" id="subVoice" style="display:none">✦ Add to Voice Wall</button>
+        <button class="bO" id="disVoice" style="display:none">Discard</button>
+      </div>
+      <div class="rConf" id="rConf">✓ Your voice has joined the sanctuary.</div>
+    </div>
+  </section>
+
+  <div class="div"></div>
+
+  <!-- VOICE WALL -->
+  <section class="vWall" id="voicewall">
+    <p class="sLbl">The Wall</p>
+    <h2 class="sTitle">Voices in the Sanctuary</h2>
+    <div class="vGrid" id="vGrid">
+      <div class="vEmp" id="vEmp">
+        <p style="margin-bottom:8px;font-size:28px">🌑</p>
+        <p>The wall is silent. Be the first to leave your voice.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="div"></div>
+
+  <!-- WAITLIST -->
+  <section class="wl" id="waitlist">
+    <p class="sLbl">Early Access</p>
+    <h2 class="sTitle">The Sanctuary Opens Soon</h2>
+    <p class="wlSub">Be among the first to enter. Leave your email and we'll unlock the doors the moment Kairo is ready.
+    </p>
+    <div class="wlForm" id="wlForm">
+      <input class="wlIn" type="email" id="wlEmail" placeholder="your@email.com" autocomplete="off" />
+      <button class="bP" id="wlBtn">Reserve Your Spot</button>
+    </div>
+    <div class="wlConf" id="wlConf">✓ You're in. The sanctuary awaits you.</div>
+  </section>
+
+  <div class="div"></div>
+
+  <!-- FINAL -->
+  <section class="final" id="final">
+    <p class="fQuote" id="fQ">"Somewhere out there… someone is waiting to listen."</p>
+    <div class="fSub" id="fS">
+      <a href="#waitlist" class="bP" style="font-size:16px;padding:16px 38px">Join the Sanctuary</a>
+    </div>
+    <p style="font-size:12px;color:rgba(156,163,175,.35);margin-top:4px">Kairo opens soon.</p>
+  </section>
+
+  <footer>
+    <div class="ftLogo"><em>K</em>airo</div>
+    <p class="ftCopy">© 2025 Kairo · No profiles. No judgment. Just voice.</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+
+</html>
