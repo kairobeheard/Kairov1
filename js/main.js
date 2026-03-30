@@ -151,9 +151,10 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000
+          noiseSuppression: false, // Disabling to prevent muffled audio artifacts
+          autoGainControl: false,  // Disabling to prevent volume pumping
+          sampleRate: 48000,
+          channelCount: 2
         }
       });
 
@@ -161,7 +162,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const source = audioContext.createMediaStreamSource(stream);
       const gainNode = audioContext.createGain();
-      gainNode.gain.value = 3.0; // Boost volume by 3x
+      gainNode.gain.value = 1.0; // Reduced from 3.0 to 1.0 to prevent terrible clipping and distortion
 
       const destination = audioContext.createMediaStreamDestination();
       source.connect(gainNode);
@@ -169,7 +170,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       chunks = [];
       const options = {
-        audioBitsPerSecond: 128000,
+        audioBitsPerSecond: 256000, // Increased bitrate for higher quality
         mimeType: 'audio/webm;codecs=opus'
       };
 
