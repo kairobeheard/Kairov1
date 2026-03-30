@@ -147,39 +147,29 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   async function startRec() {
     try {
-      // 1. Request high-quality audio
+      // 1. Request high-quality audio directly from the microphone
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: false, // Disabling to prevent muffled audio artifacts
-          autoGainControl: false,  // Disabling to prevent volume pumping
-          sampleRate: 48000,
-          channelCount: 2
+          noiseSuppression: true, // Keep this on to remove background hiss and fan noise
+          autoGainControl: true,  // Keep this on to ensure their voice is loud enough automatically
+          sampleRate: 48000
         }
       });
 
-      // 2. Volume Boost: Use Web Audio API
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioContext.createMediaStreamSource(stream);
-      const gainNode = audioContext.createGain();
-      gainNode.gain.value = 1.0; // Reduced from 3.0 to 1.0 to prevent terrible clipping and distortion
-
-      const destination = audioContext.createMediaStreamDestination();
-      source.connect(gainNode);
-      gainNode.connect(destination);
-
       chunks = [];
+      // 2. Use a high bitrate for crystal clear Opus recording
       const options = {
-        audioBitsPerSecond: 256000, // Increased bitrate for higher quality
+        audioBitsPerSecond: 256000, 
         mimeType: 'audio/webm;codecs=opus'
       };
 
-      mr = new MediaRecorder(destination.stream, options);
+      // 3. Record the stream *directly*, bypassing AudioContext which often degrades quality
+      mr = new MediaRecorder(stream, options);
       mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) };
       mr.onstop = () => {
         blob = new Blob(chunks, { type: 'audio/webm' });
         stream.getTracks().forEach(t => t.stop());
-        audioContext.close();
         showPrev();
       };
       mr.start(); isRec = true;
