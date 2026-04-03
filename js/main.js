@@ -136,61 +136,93 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const conf = document.getElementById('rConf');
   const vGrid = document.getElementById('vGrid');
   const vEmp = document.getElementById('vEmp');
+  const rCapWrap = document.getElementById('rCapWrap');
+  const vCap = document.getElementById('vCap');
   let mr = null, chunks = [], tInt = null, secs = 0, blob = null, isRec = false, vc = 0;
   const pad = n => n < 10 ? '0' + n : n, fmt = s => Math.floor(s / 60) + ':' + pad(s % 60);
 
+  // ── Detect the best supported mimeType ──
+  function getBestMimeType() {
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+    ];
+    for (const t of candidates) {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return ''; // let browser decide
+  }
+
   function startTimer() {
     secs = 0; tEl.textContent = '0:00';
-    tInt = setInterval(() => { secs++; tEl.textContent = fmt(secs); if (secs >= 30) stopRec() }, 1000);
+    tInt = setInterval(() => { secs++; tEl.textContent = fmt(secs); if (secs >= 30) stopRec(); }, 1000);
   }
-  function stopTimer() { clearInterval(tInt) }
+  function stopTimer() { clearInterval(tInt); }
 
   async function startRec() {
     try {
-      // 1. Request high-quality audio directly from the microphone
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true, // Keep this on to remove background hiss and fan noise
-          autoGainControl: true,  // Keep this on to ensure their voice is loud enough automatically
-          sampleRate: 48000
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1,
+          sampleRate: 48000,
         }
       });
 
       chunks = [];
-      // 2. Use a high bitrate for crystal clear Opus recording
-      const options = {
-        audioBitsPerSecond: 256000, 
-        mimeType: 'audio/webm;codecs=opus'
-      };
+      const mimeType = getBestMimeType();
+      const options = { mimeType };
+      if (mimeType.includes('opus') || mimeType.includes('webm')) {
+        options.audioBitsPerSecond = 128000;
+      }
 
-      // 3. Record the stream *directly*, bypassing AudioContext which often degrades quality
       mr = new MediaRecorder(stream, options);
-      mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) };
+      mr.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+
       mr.onstop = () => {
-        blob = new Blob(chunks, { type: 'audio/webm' });
+        const finalType = mr.mimeType || mimeType || 'audio/webm;codecs=opus';
+        blob = new Blob(chunks, { type: finalType });
         stream.getTracks().forEach(t => t.stop());
         showPrev();
       };
-      mr.start(); isRec = true;
+
+      mr.start(250);
+      isRec = true;
       mBtn.classList.add('rec'); mBtn.textContent = '⏹';
       viz.classList.add('on'); sStat.classList.add('active');
       startTimer();
-    } catch (e) { alert('Microphone access needed. Please allow mic and try again.') }
+    } catch (e) {
+      alert('Microphone access needed. Please allow mic and try again.');
+    }
   }
 
   function stopRec() {
-    if (mr && isRec) { mr.stop(); isRec = false; mBtn.classList.remove('rec'); mBtn.textContent = '🎙️'; viz.classList.remove('on'); sStat.classList.remove('active'); stopTimer() }
+    if (mr && isRec) {
+      mr.stop(); isRec = false;
+      mBtn.classList.remove('rec'); mBtn.textContent = '🎙️';
+      viz.classList.remove('on'); sStat.classList.remove('active');
+      stopTimer();
+    }
   }
 
   function showPrev() {
-    subBtn.style.display = 'inline-flex'; disBtn.style.display = 'inline-flex';
+    rCapWrap.style.display = 'block';
+    subBtn.style.display = 'inline-flex'; 
+    disBtn.style.display = 'inline-flex';
     sStat.innerHTML = `<span>Ready to share &nbsp;·&nbsp; </span><span class="t">${fmt(secs)}</span>`;
     mBtn.disabled = true; mBtn.style.opacity = '.38';
   }
 
   function resetRec() {
-    blob = null; subBtn.style.display = 'none'; disBtn.style.display = 'none';
+    blob = null;
+    vCap.value = '';
+    rCapWrap.style.display = 'none';
+    subBtn.style.display = 'none'; 
+    disBtn.style.display = 'none';
     sStat.innerHTML = `<span>Press to speak &nbsp;·&nbsp; </span><span class="t">0:00</span><span> / 0:30</span>`;
     mBtn.disabled = false; mBtn.style.opacity = '1'; conf.classList.remove('show');
   }
@@ -200,30 +232,42 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   subBtn.addEventListener('click', async () => {
     if (!blob) return;
-
     subBtn.disabled = true;
     subBtn.textContent = 'Uploading...';
+    const cap = vCap.value.trim();
 
     try {
-      const fileName = `voice_${Date.now()}.webm`;
+      let ext = 'webm';
+      if (blob.type.includes('ogg')) ext = 'ogg';
+      else if (blob.type.includes('mp4')) ext = 'mp4';
+
+      const fileName = `voice_${Date.now()}.${ext}`;
+
       const { data: uploadData, error: uploadError } = await supabaseClient.storage
         .from('voices')
-        .upload(fileName, blob);
+        .upload(fileName, blob, {
+          contentType: blob.type,
+          cacheControl: '3600',
+          upsert: false,
+        });
 
       if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabaseClient
         .from('voices')
-        .insert([{ storage_path: fileName, duration: secs }]);
+        .insert([{ storage_path: fileName, duration: secs, caption: cap }]);
 
       if (dbError) throw dbError;
 
       vc++;
       const { data: publicUrlData } = supabaseClient.storage.from('voices').getPublicUrl(fileName);
-      addCard(publicUrlData.publicUrl, secs, vc);
+      addCard(publicUrlData.publicUrl, secs, vc, cap);
 
       conf.classList.add('show');
-      subBtn.style.display = 'none'; disBtn.style.display = 'none';
+      vCap.value = '';
+      rCapWrap.style.display = 'none';
+      subBtn.style.display = 'none'; 
+      disBtn.style.display = 'none';
       mBtn.disabled = false; mBtn.style.opacity = '1';
       sStat.innerHTML = `<span>Press to speak &nbsp;·&nbsp; </span><span class="t">0:00</span><span> / 0:30</span>`;
       if (window.bump) window.bump();
@@ -238,21 +282,59 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
   });
 
-  function addCard(url, dur, num) {
+  function addCard(url, dur, num, cap = '') {
     if (vEmp) vEmp.style.display = 'none';
     const card = document.createElement('div'); card.className = 'vCard';
-    const bars = Array.from({ length: 18 }, (_, i) => `<div class="mWB" style="height:${15 + Math.random() * 75}%;animation-delay:${(i * .045).toFixed(2)}s"></div>`).join('');
-    card.innerHTML = `<div class="vTop"><span class="vLbl">Voice #${num}</span><span class="vDur">${fmt(dur)}</span></div><div class="vMid"><button class="vPlay">▶</button><div class="mWave">${bars}</div></div>`;
+    const bars = Array.from({ length: 18 }, (_, i) =>
+      `<div class="mWB" style="height:${15 + Math.random() * 75}%;animation-delay:${(i * .045).toFixed(2)}s"></div>`
+    ).join('');
+    
+    let capHtml = cap ? `<div class="vCaption">"${cap}"</div>` : '';
+
+    card.innerHTML = `
+      <div class="vTop"><span class="vLbl">Voice #${num}</span><span class="vDur">${fmt(dur)}</span></div>
+      ${capHtml}
+      <div class="vMid"><button class="vPlay">▶</button><div class="mWave">${bars}</div></div>`;
+
     let audio = null;
     const pb = card.querySelector('.vPlay');
+
     pb.addEventListener('click', () => {
       document.querySelectorAll('.vCard.playing').forEach(c => {
-        if (c !== card) { c.classList.remove('playing'); c.querySelector('.vPlay').textContent = '▶'; if (c._a) { c._a.pause(); c._a.currentTime = 0 } }
+        if (c !== card) {
+          c.classList.remove('playing');
+          c.querySelector('.vPlay').textContent = '▶';
+          if (c._a) { c._a.pause(); c._a.currentTime = 0; }
+        }
       });
-      if (!audio) { audio = new Audio(url); card._a = audio }
-      if (card.classList.contains('playing')) { audio.pause(); audio.currentTime = 0; card.classList.remove('playing'); pb.textContent = '▶' }
-      else { audio.play(); card.classList.add('playing'); pb.textContent = '■'; audio.onended = () => { card.classList.remove('playing'); pb.textContent = '▶' } }
+
+      if (!audio) {
+        audio = new Audio();
+        audio.preload = 'auto';
+        audio.src = url;
+        card._a = audio;
+      }
+
+      if (card.classList.contains('playing')) {
+        audio.pause();
+        audio.currentTime = 0;
+        card.classList.remove('playing');
+        pb.textContent = '▶';
+      } else {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            card.classList.add('playing');
+            pb.textContent = '■';
+          }).catch(err => {
+            console.error('Playback failed:', err);
+            alert('Playback blocked. Tap again to play.');
+          });
+        }
+        audio.onended = () => { card.classList.remove('playing'); pb.textContent = '▶'; };
+      }
     });
+
     vGrid.prepend(card);
   }
 
@@ -270,7 +352,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         if (vEmp) vEmp.style.display = 'none';
         data.forEach((v, i) => {
           const { data: publicUrlData } = supabaseClient.storage.from('voices').getPublicUrl(v.storage_path);
-          addCard(publicUrlData.publicUrl, v.duration, data.length - i);
+          addCard(publicUrlData.publicUrl, v.duration, data.length - i, v.caption);
         });
         vc = data.length;
       }
